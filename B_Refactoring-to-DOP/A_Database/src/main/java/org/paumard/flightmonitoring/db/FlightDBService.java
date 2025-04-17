@@ -1,11 +1,15 @@
 package org.paumard.flightmonitoring.db;
 
 import org.paumard.flightmonitoring.db.model.*;
+import org.paumard.flightmonitoring.model.City;
+import org.paumard.flightmonitoring.model.Flight;
+import org.paumard.flightmonitoring.model.FlightID;
+import org.paumard.flightmonitoring.service.DBService;
 
 import java.util.HashMap;
 import java.util.Map;
 
-public class FlightDBService {
+public class FlightDBService implements DBService {
 
     private static Map<String, CityEntity> cities = Map.ofEntries(
             Map.entry("Pa", new CityEntity("Paris")),
@@ -20,18 +24,18 @@ public class FlightDBService {
 
     private static Map<FlightPK, FlightEntity> flights = new HashMap<>();
 
-    public static FlightDBService getInstance() {
-        return new FlightDBService();
-    }
-
-    public FlightEntity fetchFlight(FlightPK flightId) {
+    @Override
+    public Flight fetchFlight(FlightID flightId) {
         System.out.println("Fetching flight " + flightId);
-
-        return flights.computeIfAbsent(flightId,
+        var flightPk = new FlightPK(flightId.id());
+        var flightEntity = flights.computeIfAbsent(flightPk,
                 _ -> {
-                    var from = flightId.flightId().substring(0, 2);
-                    var to = flightId.flightId().substring(2);
-                    return new FlightEntity(flightId, cities.get(from), cities.get(to), new PriceEntity(100), new PlaneEntity("Airbus A350"));
+                    var from = flightId.id().substring(0, 2);
+                    var to = flightId.id().substring(2);
+                    return new FlightEntity(flightPk, cities.get(from), cities.get(to), new PriceEntity(100), new PlaneEntity("Airbus A350"));
                 });
+        var from = new City(flightEntity.from().name());
+        var to = new City(flightEntity.to().name());
+        return new Flight(from, to);
     }
 }

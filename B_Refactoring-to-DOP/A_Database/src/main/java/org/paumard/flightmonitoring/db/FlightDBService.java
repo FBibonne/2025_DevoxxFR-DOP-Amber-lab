@@ -1,8 +1,6 @@
 package org.paumard.flightmonitoring.db;
 
-import org.paumard.flightmonitoring.business.model.City;
-import org.paumard.flightmonitoring.business.model.Flight;
-import org.paumard.flightmonitoring.business.model.FlightID;
+import org.paumard.flightmonitoring.business.model.*;
 import org.paumard.flightmonitoring.business.service.DBService;
 import org.paumard.flightmonitoring.db.model.*;
 
@@ -22,7 +20,7 @@ public class FlightDBService implements DBService {
             Map.entry("Mi", new CityEntity("Miami"))
     );
 
-    private static Map<FlightPK, FlightEntity> flights = new HashMap<>();
+    private static final Map<SimpleFlightPK, SimpleFlightEntity> simpleFlights = new HashMap<>();
 
     public static FlightDBService getInstance() {
         return new FlightDBService();
@@ -31,16 +29,26 @@ public class FlightDBService implements DBService {
     public Flight fetchFlight(FlightID flightId) {
         System.out.println("Fetching flight " + flightId);
 
-        var flightPK = new FlightPK(flightId.id());
-        var flightEntity =  flights.computeIfAbsent(flightPK,
-                _ -> {
-                    var from = flightId.id().substring(0, 2);
-                    var to = flightId.id().substring(2);
+        var flightPK = switch (flightId) {
+            case SimpleFlightID(String id) -> new SimpleFlightPK(id);
+        };
+        var flightEntity =  switch (flightPK){
+            case SimpleFlightPK(String id) ->
+            simpleFlights.computeIfAbsent(flightPK,
+                    _ -> {
+                        var from = id.substring(0, 2);
+                        var to = id.substring(2);
 
-                    return new FlightEntity(flightPK, cities.get(from), cities.get(to), new PriceEntity(100), new PlaneEntity("Airbus A350"));
-                });
-        var from = new City(flightEntity.from().name());
-        var to = new City(flightEntity.to().name());
-        return new Flight(from, to);
+                        return new SimpleFlightEntity(flightPK, cities.get(from), cities.get(to), new PriceEntity(100), new PlaneEntity("Airbus A350"));
+                    });
+        };
+        return switch (flightEntity){
+            case SimpleFlightEntity simpleFlightEntity ->{
+                var id = new SimpleFlightID(simpleFlightEntity.id().flightId());
+                var from = new City(simpleFlightEntity.from().name());
+                var to = new City(simpleFlightEntity.to().name());
+                yield new SimpleFlight(id, from, to);
+            }
+        };
     }
 }
